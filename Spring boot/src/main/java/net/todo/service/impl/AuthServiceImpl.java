@@ -1,6 +1,7 @@
 package net.todo.service.impl;
 
 import lombok.AllArgsConstructor;
+import net.todo.dto.JwtAuthResponse;
 import net.todo.dto.LoginDto;
 import net.todo.dto.RegisterDto;
 import net.todo.entity.Role;
@@ -8,6 +9,7 @@ import net.todo.entity.User;
 import net.todo.exception.TodoAPIException;
 import net.todo.repository.RoleRepository;
 import net.todo.repository.UserRepository;
+import net.todo.security.JwtTokenProvider;
 import net.todo.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -28,18 +31,19 @@ public class AuthServiceImpl implements AuthService {
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
+    private JwtTokenProvider jwtTokenProvider;
 
     @Override
     public String register(RegisterDto registerDto) {
 
-        // check if username is already exists in database
-        if (userRepository.existsByUsername(registerDto.getUsername())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Username already exits!");
+        // check username is already exists in database
+        if(userRepository.existsByUsername(registerDto.getUsername())){
+            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Username already exists!");
         }
 
-        // check if email already exists in database
-        if (userRepository.existsByEmail(registerDto.getEmail())){
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Email already exits!");
+        // check email is already exists in database
+        if(userRepository.existsByEmail(registerDto.getEmail())){
+            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Email is already exists!.");
         }
 
         User user = new User();
@@ -49,20 +53,18 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
 
         Set<Role> roles = new HashSet<>();
-        Role role = roleRepository.findByName("ROLE_USER");
-        roles.add(role);
-
+        Role userRole = roleRepository.findByName("ROLE_USER");
+        roles.add(userRole);
 
         user.setRoles(roles);
 
         userRepository.save(user);
 
-        return "User register successfully";
+        return "User Registered Successfully!.";
     }
 
     @Override
-    public String login(LoginDto loginDto) {
-
+    public JwtAuthResponse login(LoginDto loginDto) {
 
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 loginDto.getUsernameOrEmail(),
@@ -71,6 +73,25 @@ public class AuthServiceImpl implements AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        return "User login successfully!";
+        String token = jwtTokenProvider.generateToken(authentication);
+
+        Optional<User> userOptional = userRepository.findByUsernameOrEmail(loginDto.getUsernameOrEmail(), loginDto.getUsernameOrEmail());
+
+        String role = null;
+        if(userOptional.isPresent()){
+            User loggedUser = userOptional.get();
+            Optional<Role> optionalRole  = loggedUser.getRoles().stream().findFirst();
+
+            if(optionalRole.isPresent()){
+                Role userRole = optionalRole.get();
+                role = userRole.getName();
+            }
+        }
+
+        JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
+        jwtAuthResponse.setRole(role);
+        jwtAuthResponse.setAccessToken(token);
+
+        return jwtAuthResponse;
     }
 }

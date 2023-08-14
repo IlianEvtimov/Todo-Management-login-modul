@@ -73,7 +73,7 @@ public class TodoController {
     //    @PreAuthorize("permitAll()")
     // Build inComplete Todo REST API
 //    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PatchMapping("{id}/in-complete")
     public ResponseEntity<TodoDto> inCompleteTodo(@PathVariable("id") Long todoId){
         TodoDto todoDto = todoService.inCompleteTodo(todoId);

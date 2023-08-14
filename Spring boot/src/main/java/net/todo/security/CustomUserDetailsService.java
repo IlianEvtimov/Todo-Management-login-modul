@@ -26,9 +26,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("User not exists by Username or Email"));
 
-//        User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
-//                .orElseThrow(() -> new TodoAPIException(HttpStatus.BAD_REQUEST, "User not exists by Username or Email"));
-
         Set<GrantedAuthority> authorities = user.getRoles().stream()
                 .map((role) -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toSet());
@@ -40,3 +37,4 @@ public class CustomUserDetailsService implements UserDetailsService {
         );
     }
 }
+
